@@ -11,270 +11,326 @@
  */
 
 function CargoMap( allItemValues, divID, zoomLevel ) {
-	this.allItemValues = allItemValues;
-	this.divID = divID;
-	this.zoomLevel = zoomLevel;
+        this.allItemValues = allItemValues;
+        this.divID = divID;
+        this.zoomLevel = zoomLevel;
 
-	// Calculate center, and bounds, of map
-	var numItems = allItemValues.length;
-	var totalLatitude = 0;
-	var totalLongitude = 0;
-	for ( i = 0; i < numItems; i++ ) {
-		totalLatitude += allItemValues[i]['lat'];
-		totalLongitude += allItemValues[i]['lon'];
-	}
-	this.averageLatitude = totalLatitude / numItems;
-	this.averageLongitude = totalLongitude / numItems;
+        // Calculate center, and bounds, of map
+        var numItems = allItemValues.length;
+        var totalLatitude = 0;
+        var totalLongitude = 0;
+        for ( i = 0; i < numItems; i++ ) {
+                totalLatitude += allItemValues[i]['lat'];
+                totalLongitude += allItemValues[i]['lon'];
+        }
+        this.averageLatitude = totalLatitude / numItems;
+        this.averageLongitude = totalLongitude / numItems;
 
-	var furthestDistanceEast = 0;
-	var furthestDistanceWest = 0;
-	var furthestDistanceNorth = 0;
-	var furthestDistanceSouth = 0;
-	for ( i = 0; i < numItems; i++ ) {
-		var latitudeDiff = allItemValues[i]['lat'] - this.averageLatitude;
-		var longitudeDiff = allItemValues[i]['lon'] - this.averageLongitude;
-		if ( latitudeDiff > furthestDistanceNorth ) {
-			furthestDistanceNorth = latitudeDiff;
-		} else if ( latitudeDiff < furthestDistanceSouth ) {
-			furthestDistanceSouth = latitudeDiff;
-		}
-		if ( longitudeDiff > furthestDistanceEast ) {
-			furthestDistanceEast = longitudeDiff;
-		} else if ( longitudeDiff < furthestDistanceWest ) {
-			furthestDistanceWest = longitudeDiff;
-		}
-	}
+        var furthestDistanceEast = 0;
+        var furthestDistanceWest = 0;
+        var furthestDistanceNorth = 0;
+        var furthestDistanceSouth = 0;
+        for ( i = 0; i < numItems; i++ ) {
+                var latitudeDiff = allItemValues[i]['lat'] - this.averageLatitude;
+                var longitudeDiff = allItemValues[i]['lon'] - this.averageLongitude;
+                if ( latitudeDiff > furthestDistanceNorth ) {
+                        furthestDistanceNorth = latitudeDiff;
+                } else if ( latitudeDiff < furthestDistanceSouth ) {
+                        furthestDistanceSouth = latitudeDiff;
+                }
+                if ( longitudeDiff > furthestDistanceEast ) {
+                furthestDistanceEast = longitudeDiff;
+                } else if ( longitudeDiff < furthestDistanceWest ) {
+                        furthestDistanceWest = longitudeDiff;
+                }
+        } 
 
-	// In case there was only one point (or all points have the same
-	// coordinates), add in some reasonable padding.
-	if ( furthestDistanceNorth == 0 && furthestDistanceSouth == 0 && furthestDistanceEast == 0 && furthestDistanceWest == 0 ) {
-		furthestDistanceNorth = 0.0015;
-		furthestDistanceSouth = -0.0015;
-		furthestDistanceEast = 0.0015;
-		furthestDistanceWest = -0.0015;
-	}
-	this.northLatitude = this.averageLatitude + furthestDistanceNorth;
-	this.southLatitude = this.averageLatitude + furthestDistanceSouth;
-	this.eastLongitude = this.averageLongitude + furthestDistanceEast;
-	this.westLongitude = this.averageLongitude + furthestDistanceWest;
+        // In case there was only one point (or all points have the same
+        // coordinates), add in some reasonable padding.
+        if ( furthestDistanceNorth == 0 && furthestDistanceSouth == 0 && furthestDistanceEast == 0 && furthestDistanceWest == 0 ) {
+                furthestDistanceNorth = 0.0015;
+                furthestDistanceSouth = -0.0015;
+                furthestDistanceEast = 0.0015;
+                furthestDistanceWest = -0.0015;
+        }
+        this.northLatitude = this.averageLatitude + furthestDistanceNorth;
+        this.southLatitude = this.averageLatitude + furthestDistanceSouth;
+        this.eastLongitude = this.averageLongitude + furthestDistanceEast;
+        this.westLongitude = this.averageLongitude + furthestDistanceWest;
 }
 
 CargoMap.createPopupHTMLForRow = function( row ) {
-	var html = "<div style=\"min-width: 120px; min-height: 50px; padding-bottom: 30px;\"><h2>" + row['title'] + "</h2><p>";
-	for ( var fieldName in row['otherValues'] ) {
-		html += "<strong>" + fieldName + "</strong>: ";
-		html += row['otherValues'][fieldName] + "<br />";
-	}
-	html += "</p></div>\n";
-	return html;
+        var html = "<div style=\"min-width: 120px; min-height: 50px; padding-bottom: 30px;\"><h2>" + row['title'] + "</h2><p>";
+        for ( var fieldName in row['otherValues'] ) {
+                html += "<strong>" + fieldName + "</strong>: ";
+                html += row['otherValues'][fieldName] + "<br />";
+        }
+        html += "</p></div>\n";
+        return html;
 }
 
 CargoMap.prototype.display = function( mapService, doMarkerClustering ) {
-	if ( mapService == 'Google Maps' ) {
-		this.displayWithGoogleMaps( doMarkerClustering );
-	} else if ( mapService == 'Leaflet' ) {
-		this.displayWithLeaflet();
-	} else { // default is OpenLayers
-		this.displayWithOpenLayers();
-	}
+        if ( mapService == 'Google Maps' ) {
+                this.displayWithGoogleMaps( doMarkerClustering );
+        } else if ( mapService == 'Leaflet' ) {
+                this.displayWithLeaflet( doMarkerClustering );
+        } else { // default is OpenLayers
+                this.displayWithOpenLayers();
+        }
 }
 
 CargoMap.prototype.displayWithGoogleMaps = function( doMarkerClustering ) {
-	var centerLatLng = new google.maps.LatLng( this.averageLatitude, this.averageLongitude );
-	var northEastLatLng = new google.maps.LatLng( this.northLatitude, this.eastLongitude );
-	var southWestLatLng = new google.maps.LatLng( this.southLatitude, this.westLongitude );
-	var mapBounds = new google.maps.LatLngBounds( southWestLatLng, northEastLatLng );
+        if ( this.center != null ) {  //implement center of map designation if there is one
+                var centerLocation = this.center.split(",");
+                var centerLatLng = new google.maps.LatLng( centerLocation[0], centerLocation[1] );
+                if (this.zoomLevel == null) { //supply a zoom level if one isn't specified
+                        this.zoomLevel = 10;
+                }
+        }
+        else {
+                var centerLatLng = new google.maps.LatLng( this.averageLatitude, this.averageLongitude );
+                var northEastLatLng = new google.maps.LatLng( this.northLatitude, this.eastLongitude );
+                var southWestLatLng = new google.maps.LatLng( this.southLatitude, this.westLongitude );
+                var mapBounds = new google.maps.LatLngBounds( southWestLatLng, northEastLatLng );
+        }
+        var mapOptions = {
+                center: centerLatLng,
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+        }
+        if ( this.zoomLevel != null ) {
+                mapOptions['zoom'] = parseInt( this.zoomLevel );
+        }
+        var map = new google.maps.Map(document.getElementById(this.divID), mapOptions);
+        if ( this.zoomLevel == null ) {
+                map.fitBounds( mapBounds );
+        }
 
-	var mapOptions = {
-		center: centerLatLng,
-		mapTypeId: google.maps.MapTypeId.ROADMAP
-	}
-	if ( this.zoomLevel != null ) {
-		mapOptions['zoom'] = parseInt( this.zoomLevel );
-	}
-	var map = new google.maps.Map(document.getElementById(this.divID), mapOptions);
-	if ( this.zoomLevel == null ) {
-		map.fitBounds( mapBounds );
-	}
+        var infoWindows = [];
+        var numItems = this.allItemValues.length;
+        for ( i = 0; i < numItems; i++ ) {
+                if ( this.allItemValues[i]['title'] != null ) {
+                        infoWindows[i] = new google.maps.InfoWindow({
+                                content: CargoMap.createPopupHTMLForRow( this.allItemValues[i] )
+                        });
+                }
+        }
 
-	var infoWindows = [];
-	var numItems = this.allItemValues.length;
-	for ( i = 0; i < numItems; i++ ) {
-		if ( this.allItemValues[i]['title'] != null ) {
-			infoWindows[i] = new google.maps.InfoWindow({
-				content: CargoMap.createPopupHTMLForRow( this.allItemValues[i] )
-			});
-		}
-	}
+        if ( doMarkerClustering ) {
+                var markers = [];
+        }
+        for ( i = 0; i < numItems; i++ ) {
+                var curItem = this.allItemValues[i];
+                var curLatLng = new google.maps.LatLng( curItem['lat'], curItem['lon'] );
+                var markerOptions = {
+                        position: curLatLng,
+                        map: map,
+                        title: curItem['name'],
+                        itemNum: i // Cargo-specific
+                };
+                if ( curItem.hasOwnProperty('icon') ) {
+                        markerOptions.icon = curItem.icon;
+                }
+                var marker = new google.maps.Marker( markerOptions );
+                if ( doMarkerClustering ) {
+                        markers.push( marker );
+                }
 
-	if ( doMarkerClustering ) {
-		var markers = [];
-	}
-	for ( i = 0; i < numItems; i++ ) {
-		var curItem = this.allItemValues[i];
-		var curLatLng = new google.maps.LatLng( curItem['lat'], curItem['lon'] );
-		var markerOptions = {
-			position: curLatLng,
-			map: map,
-			title: curItem['name'],
-			itemNum: i // Cargo-specific
-		};
-		if ( curItem.hasOwnProperty('icon') ) {
-			markerOptions.icon = curItem.icon;
-		}
-		var marker = new google.maps.Marker( markerOptions );
-		if ( doMarkerClustering ) {
-			markers.push( marker );
-		}
-
-		if ( curItem['title'] != null ) {
-			google.maps.event.addListener(marker, 'click', function() {
-				for ( i = 0; i < numItems; i++ ) {
-					infoWindows[i].close();
-				}
-				infoWindows[this.itemNum].open(map,this);
-			});
-		}
-	}
-	if ( doMarkerClustering ) {
-		var mc = new MarkerClusterer( map, markers );
-	}
+                if ( curItem['title'] != null ) {
+                        google.maps.event.addListener(marker, 'click', function() {
+                                for ( i = 0; i < numItems; i++ ) {
+                                        infoWindows[i].close();
+                                }
+                                infoWindows[this.itemNum].open(map,this);
+                        });
+                }
+        }
+        if ( doMarkerClustering ) {
+                var mc = new MarkerClusterer( map, markers );
+        }
 }
 
 CargoMap.toOpenLayersLonLat = function( map, lat, lon ) {
-	return new OpenLayers.LonLat( lon, lat ).transform(
-		new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
-		map.getProjectionObject() // to Spherical Mercator Projection
-	);
+        return new OpenLayers.LonLat( lon, lat ).transform(
+                new OpenLayers.Projection("EPSG:4326"), // transform from WGS 1984
+                map.getProjectionObject() // to Spherical Mercator Projection
+        );
 }
 
-CargoMap.prototype.displayWithLeaflet = function() {
-	var mapCanvas = document.getElementById(this.divID);
-	var mapOptions = {};
-	var layerOptions = {
-		attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-	};
+CargoMap.prototype.displayWithLeaflet = function( doMarkerClustering ) {
+        var mapCanvas = document.getElementById(this.divID);
+        var mapOptions = {};
+        var layerOptions = {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        };
 
-	var mapDataDiv = $(mapCanvas).find(".cargoMapData");
-	var imageUrl = mapDataDiv.attr('data-image-path');
-	if ( imageUrl !== undefined ) {
-		imageHeight = mapDataDiv.attr('data-height');
-		imageWidth = mapDataDiv.attr('data-width');
-		mapOptions.crs = L.CRS.Simple;
-	}
+        var mapDataDiv = $(mapCanvas).find(".cargoMapData");
+        var imageUrl = mapDataDiv.attr('data-image-path');
+        var center = mapDataDiv.attr('data-center');
 
-	var map = L.map(mapCanvas, mapOptions);
+        if (center !==undefined ){
+                var centerLocation = center.split(","); // center point of map, if specified
+        }
 
-	if ( imageUrl !== undefined ) {
-		var imageBounds = [[0, 0], [imageHeight, imageWidth]];
-		L.imageOverlay(imageUrl, imageBounds).addTo(map);
-		map.fitBounds(imageBounds);
-	} else {
-		new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', layerOptions).addTo(map);
-		var imageBounds = [[this.southLatitude, this.westLongitude], [this.northLatitude, this.eastLongitude]];
-		map.fitBounds(imageBounds);
-	}
+        if ( imageUrl !== undefined ) {
+                imageHeight = mapDataDiv.attr('data-height');
+                imageWidth = mapDataDiv.attr('data-width');
+                mapOptions.crs = L.CRS.Simple;
+        }
 
-	if ( this.zoomLevel != null ) {
-		map.setZoom( this.zoomLevel );
-	}
+        var map = L.map(mapCanvas, mapOptions);
+        if ( imageUrl !== undefined ) {
+                var imageBounds = [[0, 0], [imageHeight, imageWidth]];
+                L.imageOverlay(imageUrl, imageBounds).addTo(map);
+                map.fitBounds(imageBounds);
+        } else if ( centerLocation == undefined ) {
+                new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', layerOptions).addTo(map);
+                var imageBounds = [[this.southLatitude, this.westLongitude], [this.northLatitude, this.eastLongitude]];
+                map.fitBounds(imageBounds);
+        } else {
+                if (this.zoomLevel == null) { //in case someone set the center but didn't set a zoom level
+                        this.zoomLevel = 10;
+                }
+                map.setView(centerLocation,this.zoomLevel);
+                new L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', layerOptions).addTo(map);
+        }
 
-	var numItems = this.allItemValues.length;
-	for ( var i = 0; i < numItems; i++ ) {
-		var curItem = this.allItemValues[i];
-		var lat = curItem['lat'];
-		var lon = curItem['lon'];
-		if ( imageUrl !== undefined ) {
-			lat *= imageWidth / 100;
-			lon *= imageWidth / 100;
-		}
-		var marker = L.marker([lat, lon]).addTo( map );
-		if ( curItem.hasOwnProperty('icon') ) {
-			var icon = L.icon({iconUrl: curItem.icon});
-			marker.setIcon( icon );
-		}
-		if ( this.allItemValues[ i ].title !== null ) {
-			marker.bindPopup( CargoMap.createPopupHTMLForRow( curItem ) );
-		}
-	}
+        if ( this.zoomLevel != null ) {
+                map.setZoom( this.zoomLevel );
+        }
+
+        var numItems = this.allItemValues.length;
+
+        if ( doMarkerClustering ) {
+                var markers = L.markerClusterGroup();
+        }
+
+        for ( i = 0; i < numItems; i++ ) {
+                var curItem = this.allItemValues[i];
+                var lat = curItem['lat'];
+                var lon = curItem['lon'];
+                if ( imageUrl !== undefined ) {
+                        lat *= imageWidth / 100;
+                        lon *= imageWidth / 100;
+                }
+                if ( doMarkerClustering ) {
+                        var marker = L.marker([lat, lon]);
+                } else {
+                        var marker = L.marker([lat, lon]).addTo( map );
+                }
+
+                if ( curItem.hasOwnProperty('icon') ) {
+                        // iconAnchor below assumes a marker 25px x 41 px, with the bottom center at "the point"
+                        // we might need to generalize that for other sorts of markers
+                        var icon = L.icon({iconUrl: curItem.icon, iconAnchor: [13,41]});
+                        marker.setIcon( icon );
+                        if ( this.allItemValues[i]['title'] != null ) {
+                                marker.bindPopup( CargoMap.createPopupHTMLForRow( curItem ) );
+                        }
+                }
+                if ( doMarkerClustering ) {
+                        markers.addLayer(marker);
+                }
+
+        }
+        if ( doMarkerClustering ) {
+                map.addLayer(markers);
+        }
 }
 
 CargoMap.prototype.displayWithOpenLayers = function() {
-	var map = new OpenLayers.Map( this.divID );
-	map.addLayer( new OpenLayers.Layer.OSM(
-		'OpenStreetMap',
-		// Use relative-protocol URLs because the OSM layer defaults to HTTP only.
-		[
-			'//a.tile.openstreetmap.org/${z}/${x}/${y}.png',
-			'//b.tile.openstreetmap.org/${z}/${x}/${y}.png',
-			'//c.tile.openstreetmap.org/${z}/${x}/${y}.png'
-		],
-		null
-	) );
+        var map = new OpenLayers.Map( this.divID );
+        map.addLayer( new OpenLayers.Layer.OSM(
+                'OpenStreetMap',
+                // Use relative-protocol URLs because the OSM layer defaults to HTTP only.
+                [
+                        '//a.tile.openstreetmap.org/${z}/${x}/${y}.png',
+                        '//b.tile.openstreetmap.org/${z}/${x}/${y}.png',
+                        '//c.tile.openstreetmap.org/${z}/${x}/${y}.png'
+                ],
+                null
+        ) );
 
-	// Center coordinates are not used by OpenLayers.
-	var southWestLonLat = CargoMap.toOpenLayersLonLat( map, this.southLatitude, this.westLongitude );
-	var northEastLonLat = CargoMap.toOpenLayersLonLat( map, this.northLatitude, this.eastLongitude );
-	var mapBounds = new OpenLayers.Bounds();
-	mapBounds.extend( southWestLonLat );
-	mapBounds.extend( northEastLonLat );
-	map.zoomToExtent( mapBounds );
-	if ( this.zoomLevel != null ) {
-		map.zoomTo( this.zoomLevel );
-	}
+        if ( this.center != null ) {
+                var centerLocation = this.center.split(",");
+                centerLat = parseFloat(centerLocation[0]);
+                centerLon = parseFloat(centerLocation[1]);
+                map.setCenter( CargoMap.toOpenLayersLonLat( map, centerLat, centerLon ) );
+                if (this.zoomLevel == null) {
+                        this.zoomLevel = 10;
+                }
 
-	var markers = new OpenLayers.Layer.Markers( "Markers" );
-	map.addLayer( markers );
+        }
+        else {
+        var southWestLonLat = CargoMap.toOpenLayersLonLat( map, this.southLatitude, this.westLongitude );
+        var northEastLonLat = CargoMap.toOpenLayersLonLat( map, this.northLatitude, this.eastLongitude );
+        var mapBounds = new OpenLayers.Bounds();
+        mapBounds.extend( southWestLonLat );
+        mapBounds.extend( northEastLonLat );
+        map.zoomToExtent( mapBounds );
+        }
+        if ( this.zoomLevel != null ) {
+                map.zoomTo( this.zoomLevel );
+        }
 
-	var popupClass = OpenLayers.Class(OpenLayers.Popup.FramedCloud, {
-		"autoSize": true,
-		"minSize": new OpenLayers.Size(300, 50),
-		"maxSize": new OpenLayers.Size(500, 300),
-		"keepInMap": true
-	});
+        var markers = new OpenLayers.Layer.Markers( "Markers" );
+        map.addLayer( markers );
 
-	var numItems = this.allItemValues.length;
-	for ( i = 0; i < numItems; i++ ) {
-		var curItem = this.allItemValues[i];
-		var curLonLat = CargoMap.toOpenLayersLonLat( map, curItem['lat'], curItem['lon'] );
-		var feature = new OpenLayers.Feature( markers, curLonLat );
-		feature.closeBox = true;
-		feature.popupClass = popupClass;
+        var popupClass = OpenLayers.Class(OpenLayers.Popup.FramedCloud, {
+                "autoSize": true,
+                "minSize": new OpenLayers.Size(300, 50),
+                "maxSize": new OpenLayers.Size(500, 300),
+                "keepInMap": true
+        });
 
-		feature.data.popupContentHTML = CargoMap.createPopupHTMLForRow( curItem )
+        var numItems = this.allItemValues.length;
+        for ( i = 0; i < numItems; i++ ) {
+                var curItem = this.allItemValues[i];
+                var curLonLat = CargoMap.toOpenLayersLonLat( map, curItem['lat'], curItem['lon'] );
+                var feature = new OpenLayers.Feature( markers, curLonLat );
+                feature.closeBox = true;
+                feature.popupClass = popupClass;
 
-		if ( curItem.hasOwnProperty( 'icon' ) ) {
-			var icon = new OpenLayers.Icon( curItem.icon );
-			var marker = new OpenLayers.Marker( curLonLat, icon );
-		} else {
-			var marker = new OpenLayers.Marker( curLonLat );
-		}
-		markers.addMarker( marker );
+                feature.data.popupContentHTML = CargoMap.createPopupHTMLForRow( curItem )
 
-		if ( curItem['title'] != null ) {
-			marker.events.register( 'mousedown', feature, function(evt) {
-				if (this.popup == null ) {
-					this.popup = this.createPopup( true );
-					map.addPopup( this.popup );
-					this.popup.show();
-				} else {
-					this.popup.toggle();
-				}
-				currentPopup = this.popup;
-				OpenLayers.Event.stop( evt );
-			});
-		}
-	}
+                if ( curItem.hasOwnProperty( 'icon' ) ) {
+                        var icon = new OpenLayers.Icon( curItem.icon );
+                        var marker = new OpenLayers.Marker( curLonLat, icon );
+                } else {
+                        var marker = new OpenLayers.Marker( curLonLat );
+                }
+                markers.addMarker( marker );
+
+                if ( curItem['title'] != null ) {
+                        marker.events.register( 'mousedown', feature, function(evt) {
+                                if (this.popup == null ) {
+                                        this.popup = this.createPopup( true );
+                                        map.addPopup( this.popup );
+                                        this.popup.show();
+                                } else {
+                                        this.popup.toggle();
+                                }
+                                currentPopup = this.popup;
+                                OpenLayers.Event.stop( evt );
+                        });
+                }
+        }
 }
 
 jQuery(document).ready( function() {
-	jQuery(".mapCanvas").each( function() {
-		var mapDataText = $(this).find(".cargoMapData").text();
-		var valuesForMap = jQuery.parseJSON(mapDataText);
-		var mappingService = $(this).find(".cargoMapData").attr('data-mapping-service');
-		var zoomLevel = $(this).find(".cargoMapData").attr('data-zoom');
-		var doMarkerClustering = valuesForMap.length >= mw.config.get( 'wgCargoMapClusteringMinimum' );
-		var cargoMap = new CargoMap( valuesForMap, $(this).attr('id'), zoomLevel );
-		cargoMap.display( mappingService, doMarkerClustering );
-	});
+        jQuery(".mapCanvas").each( function() {
+                var doMarkerClustering = null;
+                var mapDataText = $(this).find(".cargoMapData").text();
+                var valuesForMap = jQuery.parseJSON(mapDataText);
+                var mappingService = $(this).find(".cargoMapData").attr('data-mapping-service');
+                var zoomLevel = $(this).find(".cargoMapData").attr('data-zoom');
+                var center = $(this).find(".cargoMapData").attr('data-center');
+                var clustering = $(this).find(".cargoMapData").attr('data-cluster');
+                if ( clustering == "Yes" ) {
+                        doMarkerClustering = true;
+                } 
+//              var doMarkerClustering = valuesForMap.length >= mw.config.get( 'wgCargoMapClusteringMinimum' );
+                var cargoMap = new CargoMap( valuesForMap, $(this).attr('id'), zoomLevel, center );
+                cargoMap.display( mappingService, doMarkerClustering );
+        });
 });
+
