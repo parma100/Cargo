@@ -107,8 +107,8 @@ class CargoDisplayMap {
                 if ( $centerStr != null ) {
                         $displayParams['center'] = $centerStr;
                 }
-                if ( $clusterrStr != null ) {
-                        $displayParams['cluster'] = $centerStr;
+                if ( $clusterStr != null ) {
+                        $displayParams['cluster'] = $clusterStr;
                 }
 
                 try {
