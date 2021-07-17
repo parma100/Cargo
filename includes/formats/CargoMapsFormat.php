@@ -258,7 +258,6 @@ class CargoMapsFormat extends CargoDisplayFormat {
                         $mapDataAttrs['data-center'] = $displayParams['center'];
                 }
 
-
                 if ( array_key_exists( 'cluster', $displayParams ) ) {
                         $mapDataAttrs['data-cluster'] = 'Yes';
                 }
